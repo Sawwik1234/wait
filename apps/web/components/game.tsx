@@ -38,7 +38,7 @@ export function ItemCard({ item, footer, selected, onClick, glow }: { item: Item
   return (
     <div
       onClick={onClick}
-      className={`card ${onClick ? 'card-hover' : ''}`}
+      className={`card item-card ${onClick ? 'card-hover' : ''}`}
       style={{
         cursor: onClick ? 'pointer' : 'default',
         border: `1px solid ${selected ? c : 'var(--border)'}`,
@@ -52,7 +52,7 @@ export function ItemCard({ item, footer, selected, onClick, glow }: { item: Item
       <div style={{ height: 3, background: c, opacity: 0.9 }} />
       <div style={{ padding: '12px 12px 8px', textAlign: 'center' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={item.image} alt={item.name} loading="lazy" style={{ width: '100%', maxWidth: 130, aspectRatio: '4/3', objectFit: 'contain' }} />
+        <img className="item-img" src={item.image} alt={item.name} loading="lazy" style={{ width: '100%', maxWidth: 130, aspectRatio: '4/3', objectFit: 'contain' }} />
       </div>
       <div style={{ padding: '0 12px 10px', textAlign: 'center' }}>
         <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
@@ -83,11 +83,11 @@ export function CaseCard({ c }: { c: CaseLike }) {
     : null;
   return (
     <Link href={`/cases/${c.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-      <div className="card card-hover" style={{ overflow: 'hidden', height: '100%' }}>
+      <div className="card card-hover case-card" style={{ overflow: 'hidden', height: '100%', position: 'relative' }}>
         <div style={{ padding: '18px 16px 8px', textAlign: 'center', position: 'relative' }}>
           {best && <RarityBadge rarity={best.rarity} />}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={c.image} alt={c.name} loading="lazy" style={{ width: '100%', maxWidth: 150, aspectRatio: '1/1', objectFit: 'contain' }} />
+          <img className="case-img" src={c.image} alt={c.name} loading="lazy" style={{ width: '100%', maxWidth: 150, aspectRatio: '1/1', objectFit: 'contain' }} />
         </div>
         <div style={{ padding: '4px 14px 14px', textAlign: 'center' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{c.name}</div>

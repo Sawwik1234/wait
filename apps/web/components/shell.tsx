@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { post } from '../lib/api';
 import { DICT } from '../lib/i18n';
 import { useStore } from '../lib/store';
+import { AmbientBackground, NoiseOverlay, CursorLight, LoFiPlayer } from './effects';
 
 function Coin({ size = 16 }: { size?: number }) {
   return (
@@ -69,12 +70,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [me, path]);
 
   const isAuthPage = path === '/login' || path === '/register';
-  if (isAuthPage) return <main style={{ minHeight: '100vh' }}>{children}</main>;
+  if (isAuthPage) {
+    return (
+      <>
+        <AmbientBackground />
+        <main style={{ minHeight: '100vh', position: 'relative', zIndex: 1 }}>{children}</main>
+      </>
+    );
+  }
 
   const active = (href: string) => path.startsWith(href);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <>
+      <AmbientBackground />
+      <NoiseOverlay />
+      <CursorLight />
+      <LoFiPlayer />
+      <div style={{ display: 'flex', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
       {/* ---- sidebar (desktop) ---- */}
       <aside
         className="sidebar"
@@ -272,7 +285,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           main { padding-bottom: 40px !important; }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }
 
