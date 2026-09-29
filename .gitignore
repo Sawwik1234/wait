@@ -16,3 +16,9 @@ uploads/
 
 # misc
 .arena/
+
+# sandbox/junk guards
+.cache/
+.npm/
+.config/
+apps/api/.env

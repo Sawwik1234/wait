@@ -14,7 +14,8 @@
     "db:push": "npm run db:push -w api",
     "db:seed": "npm run db:seed -w api",
     "test": "npm run test -w api",
-    "setup": "npm install && npm run db:push -w api && npm run db:seed -w api"
+    "setup": "npm install && npm run db:push -w api && npm run db:seed -w api",
+    "postinstall": "npm run db:generate -w api || echo '[postinstall] prisma generate skipped — run: npm run db:generate -w api'"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

@@ -7,6 +7,19 @@ import { PrismaClient } from '@prisma/client';
 import { scryptSync, randomBytes } from 'node:crypto';
 import { solveCaseWeights, tableEv } from '../src/common/economy';
 
+// zero-config: pick DATABASE_URL from prisma/.env when the process env lacks it
+if (!process.env.DATABASE_URL) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { readFileSync } = require('node:fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { join } = require('node:path');
+    const raw = readFileSync(join(__dirname, '.env'), 'utf8');
+    const m = raw.match(/^\s*DATABASE_URL\s*=\s*"?([^"\r\n]+)"?\s*$/m);
+    if (m) process.env.DATABASE_URL = m[1];
+  } catch {}
+}
+
 const prisma = new PrismaClient();
 
 function hashPassword(password: string): string {

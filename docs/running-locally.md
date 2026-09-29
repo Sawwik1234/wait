@@ -43,6 +43,10 @@ cp .env.example .env        # Git Bash / macOS / Linux
 
 В проде обязательно смени `JWT_SECRET`, `ADMIN_PASSWORD`, `ADMIN_SECRET_CODE`.
 
+> Раньше создавал `apps/api/.env` по старой инструкции? Удали его — теперь
+> единственный источник — `apps/api/prisma/.env` (уже в репо). Два файла с
+> `DATABASE_URL` конфликтуют: `Error: conflict between env var in .env and prisma\.env`.
+
 ## 4. Установка и БД
 
 ```bash

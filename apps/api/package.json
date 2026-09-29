@@ -7,8 +7,9 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
-    "test": "vitest run"
+    "db:seed": "prisma generate && tsx prisma/seed.ts",
+    "test": "vitest run",
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.0",
