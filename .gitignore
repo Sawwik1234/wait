@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal
+.DS_Store
+# env & secrets
+.env
+*.log
+
+# private spec / uploads
+uploads/
+
+# misc
+.arena/

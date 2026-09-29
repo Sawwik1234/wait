@@ -1,0 +1,267 @@
+// ============================================================
+// CaseArena — database schema (Prisma)
+// Dev profile: SQLite (zero-dependency). Production: PostgreSQL —
+// switch datasource provider + DATABASE_URL (see docs/deployment.md).
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- identity ----------
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  role         String   @default("USER") // USER | MODERATOR | ADMIN | SUPER_ADMIN
+  isBot        Boolean  @default(false)
+  xp           Int      @default(0)
+  streak       Int      @default(0)
+  lastDailyAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  balance        Balance?
+  sessions       Session[]
+  inventory      InventoryItem[]
+  opens          CaseOpen[]
+  upgrades       Upgrade[]
+  contracts      Contract[]
+  dailyClaims    DailyClaim[]
+  notifications  Notification[]
+  tickets        Ticket[]
+  ledger         Ledger[]
+}
+
+model Session {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String @unique
+  userAgent        String?
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+
+  @@index([userId])
+}
+
+// ---------- economy ----------
+
+model Balance {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// Immutable append-only money log. Every AP movement lands here.
+model Ledger {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount       Int // negative = burned, positive = granted
+  type         String // WELCOME_BONUS | DAILY_REWARD | CASE_OPEN | UPGRADE_CONSUME | UPGRADE_PAYOUT | CONTRACT_CONSUME | CONTRACT_PAYOUT | SELL_ITEM | ADMIN_ADJUSTMENT
+  referenceId  String?
+  balanceAfter Int
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+// ---------- content ----------
+
+model Item {
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  name         String
+  image        String
+  rarity       String // COMMON | UNCOMMON | RARE | EPIC | LEGENDARY | MYTHIC
+  value        Int // reference AP value used by economy math
+  kind         String   @default("WEAPON") // WEAPON | KNIFE | GEAR
+  displayOrder Int      @default(0)
+
+  caseItems CaseItem[]
+  inventory InventoryItem[]
+  opens     CaseOpen[]
+  upgrades  Upgrade[]       @relation("targetItem")
+  contracts Contract[]      @relation("outputItem")
+}
+
+model Case {
+  id           String   @id @default(uuid())
+  slug         String   @unique
+  name         String
+  description  String
+  image        String
+  price        Int
+  rtp          Float    @default(0.88) // target return-to-player, e.g. 0.88 -> house edge 12%
+  category     String   @default("standard")
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items CaseItem[]
+  opens CaseOpen[]
+}
+
+model CaseItem {
+  id      String @id @default(uuid())
+  caseId  String
+  case    Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  itemId  String
+  item    Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  weight  Int // relative drop weight; exact EV is solved at seed time
+  rolls   Int    @default(0) // aggregate counter for analytics
+
+  @@unique([caseId, itemId])
+  @@index([caseId])
+}
+
+// ---------- gameplay ----------
+
+model CaseOpen {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseId     String
+  case       Case     @relation(fields: [caseId], references: [id])
+  itemId     String
+  item       Item     @relation(fields: [itemId], references: [id])
+  cost       Int
+  seed       String // hex seed of the RNG for this opening (audit)
+  roll       String // raw uniform uint32 as decimal string (audit)
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model InventoryItem {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId     String
+  item       Item     @relation(fields: [itemId], references: [id])
+  sourceType String // CASE_OPEN | UPGRADE | CONTRACT | DAILY_REWARD | WELCOME | ADMIN
+  sourceId   String?
+  status     String   @default("OWNED") // OWNED | CONSUMED | SOLD
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+model Upgrade {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inputIds     String // JSON array of InventoryItem ids
+  inputCost    Int
+  targetItem   Item     @relation("targetItem", fields: [targetItemId], references: [id])
+  targetItemId String
+  chanceBp     Int // real win chance, basis points (1/10000), fee already applied
+  chanceShown  Float // chance displayed to the user, %
+  roll         String
+  success      Boolean
+  seed         String
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Contract {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inputIds     String // JSON array of InventoryItem ids
+  inputCost    Int
+  outputItem   Item     @relation("outputItem", fields: [outputItemId], references: [id])
+  outputItemId String
+  seed         String
+  roll         String
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model DailyClaim {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day         Int // 1..7 cycle position
+  rewardType  String // POINTS | ITEM
+  itemId      String?
+  amount      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ---------- meta ----------
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // REWARD | SYSTEM | TICKET
+  title     String
+  body      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model Ticket {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  category  String   @default("OTHER") // BUG | PAYMENTS_IMPOSSIBLE | ACCOUNT | IDEA | OTHER
+  status    String   @default("OPEN") // OPEN | ANSWERED | CLOSED
+  priority  String   @default("NORMAL") // LOW | NORMAL | HIGH
+  messages  TicketMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+model TicketMessage {
+  id       String  @id @default(uuid())
+  ticketId String
+  ticket   Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId String
+  isStaff  Boolean @default(false)
+  text     String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  action    String
+  entity    String?
+  entityId  String?
+  meta      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
