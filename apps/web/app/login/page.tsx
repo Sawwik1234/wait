@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { post } from '../../lib/api';
 import { useStore, type Me } from '../../lib/store';
 import { DICT } from '../../lib/i18n';
@@ -19,7 +19,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const steamFailed = typeof window !== 'undefined' && window.location.search.includes('steam=failed');
+  // Read the query param in an effect, NOT during render: `window` does not exist
+  // during SSR, and branching on it produces a server/client hydration mismatch.
+  const [steamFailed, setSteamFailed] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('steam') === 'failed') setSteamFailed(true);
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +55,9 @@ export default function LoginPage() {
 
         {steamFailed && (
           <div style={{ background: '#3f1d28', border: '1px solid var(--danger)', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, marginBottom: 16 }}>
-            {lang === 'ru' ? 'Steam-вход не удался. Попробуй ещё раз.' : 'Steam sign-in failed. Try again.'}
+            {lang === 'ru'
+              ? 'Steam-вход не удался (точная причина — в консоли API). Попробуй ещё раз или войди как тестовый игрок.'
+              : 'Steam sign-in failed (exact reason is in the API console). Try again or use the dev sign-in.'}
           </div>
         )}
 
@@ -78,6 +85,17 @@ export default function LoginPage() {
             ? 'Все игроки входят через Steam. Аккаунт создаётся автоматически (+2500 AP).'
             : 'All players sign in via Steam. Account is created automatically (+2500 AP).'}
         </div>
+
+        {/* DEV ONLY: stripped from production builds at compile time (NODE_ENV is inlined). */}
+        {process.env.NODE_ENV === 'development' && (
+          <a
+            href="/api/auth/steam/dev?name=DevPlayer"
+            className="btn btn-ghost"
+            style={{ width: '100%', padding: '10px 0', fontSize: 12.5, marginTop: 10, borderStyle: 'dashed' }}
+          >
+            🧪 {lang === 'ru' ? 'DEV: войти без Steam (локальный тест)' : 'DEV: sign in without Steam (local test)'}
+          </a>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0 14px', color: 'var(--text-dim)', fontSize: 11 }}>
           <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />

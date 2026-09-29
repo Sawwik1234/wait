@@ -34,13 +34,20 @@ export class SteamService {
   async verifyCallback(query: Record<string, string>): Promise<string | null> {
     const claimedId = query['openid.claimed_id'];
     if (!claimedId || !/^https:\/\/steamcommunity\.com\/openid\/id\/\d{17}$/.test(claimedId)) {
+      this.logger.warn(
+        `[steam] assertion rejected: claimed_id ${claimedId ? `"${claimedId}" (bad format)` : 'missing'} (openid.mode=${query['openid.mode'] ?? 'none'}) — most likely the user cancelled on Steam, or Steam returned an error page`,
+      );
       return null;
     }
 
-    const body = new URLSearchParams({ 'openid.mode': 'check_authentication' });
+    // Canonical check_authentication call: forward every openid.* param but
+    // REPLACE openid.mode with check_authentication (never send duplicates —
+    // the OP must see exactly one mode, otherwise verification can fail).
+    const body = new URLSearchParams();
     for (const [k, v] of Object.entries(query)) {
       if (k.startsWith('openid.')) body.append(k, v);
     }
+    body.set('openid.mode', 'check_authentication');
 
     try {
       const res = await fetch(STEAM_OPENID, {
@@ -49,10 +56,16 @@ export class SteamService {
         body: body.toString(),
       });
       const text = await res.text();
-      if (!/is_valid\s*:\s*true/.test(text)) return null;
+      if (!/is_valid\s*:\s*true/.test(text)) {
+        this.logger.warn(`[steam] steamcommunity.com says the assertion is NOT valid (HTTP ${res.status}) — signature/params mismatch`);
+        return null;
+      }
       return claimedId.split('/').pop() ?? null;
     } catch (e) {
-      this.logger.warn(`Steam verify failed: ${e instanceof Error ? e.message : e}`);
+      const code = (e as { cause?: { code?: string } })?.cause?.code ?? '';
+      this.logger.warn(
+        `[steam] cannot reach steamcommunity.com from the API process (network/proxy/antivirus?): ${e instanceof Error ? e.message : e} ${code}`,
+      );
       return null;
     }
   }

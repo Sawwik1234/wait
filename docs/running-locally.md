@@ -105,6 +105,27 @@ npm run db:seed -w api  # пересидеть базу (сбросит игро
 Прод-профиль (PostgreSQL + Docker): см. README, раздел «Прод (Docker)» —
 в `docker-compose.yml` уже есть postgres/api/web/nginx.
 
+## Steam-вход на localhost
+
+Как это работает: кнопка на `/login` → `localhost:3000/api/auth/steam` → редирект на
+steamcommunity.com → после входа Steam возвращает браузер на
+`localhost:3000/api/auth/steam/callback` → API проверяет assertion у Steam (POST
+`check_authentication` на steamcommunity.com **из процесса API**) → кукисы → `/cases`.
+
+Если после Steam тебя вернуло на `/login?steam=failed` — точная причина теперь пишется
+в консоль API (терминал, где запущен `npm run dev -w api`), одна из трёх:
+
+| Строка в логе API | Причина | Что делать |
+|---|---|---|
+| `assertion rejected: claimed_id missing … openid.mode=…` | отмена на странице Steam / ошибка Steam | просто войти ещё раз |
+| `steamcommunity.com says the assertion is NOT valid` | Steam не подтвердил подпись | повторить; если повторяется — создать issue |
+| `cannot reach steamcommunity.com from the API process` | сеть/прокси/антивирус режет исходящий HTTPS из Node | разрешить Node доступ к steamcommunity.com или пользоваться DEV-входом ниже |
+
+**DEV-вход без Steam (только в dev-сборке):** на странице `/login` под кнопкой Steam есть
+пунктирная кнопка «🧪 DEV: войти без Steam» — она заводит тестового игрока без обращения к
+Steam (имя `DevPlayer`; можно любое: `/api/auth/steam/dev?name=Имя`, одно имя = один аккаунт).
+В продакшен-сборке эндпоинт и кнопка отсутствуют полностью — игроки входят только через Steam.
+
 ## Частые проблемы
 
 | Симптом | Причина/решение |
@@ -112,4 +133,6 @@ npm run db:seed -w api  # пересидеть базу (сбросит игро
 | `PrismaClient did not initialize` | нет `DATABASE_URL` — см. шаг 3 |
 | 401 на всех запросах | не сидирована база или устаревший токен — перелогинься |
 | Порт занят | `PORT=4001` в корневом `.env` для API; веб: `npm run dev:web -- -p 3001` |
-| Steam-вход не возвращает | проверь, что открыт именно `localhost:3000`, а не IP/127.0.0.1 |
+| Steam-вход не возвращает | проверь, что открыт именно `localhost:3000`, а не IP/127.0.0.1; причина — в логе API (см. раздел выше) |
+| Красная ошибка Hydration failed на `/login` | была в старых версиях — обновись до свежего main |
+
