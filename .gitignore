@@ -7,7 +7,8 @@ apps/api/prisma/dev.db-journal
 !apps/api/prisma/.env
 .DS_Store
 # env & secrets
-.env
+/.env
+!apps/api/prisma/.env
 *.log
 
 # private spec / uploads
