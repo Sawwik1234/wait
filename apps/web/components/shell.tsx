@@ -30,11 +30,13 @@ function BalanceChip() {
   );
 }
 
-const NAV: { href: string; key: keyof typeof DICT.ru; icon: string }[] = [
+const NAV: { href: string; key: keyof typeof DICT.ru; icon: string; label?: string }[] = [
   { href: '/cases', key: 'cases', icon: '🎁' },
+  { href: '/battles', key: 'battles', icon: '⚔', label: 'Бои' },
   { href: '/upgrade', key: 'upgrade', icon: '⚡' },
   { href: '/contracts', key: 'contracts', icon: '📜' },
   { href: '/inventory', key: 'inventory', icon: '🎒' },
+  { href: '/missions', key: 'missions', icon: '🎯', label: 'Миссии' },
   { href: '/daily', key: 'daily', icon: '📅' },
   { href: '/leaderboard', key: 'leaderboard', icon: '🏆' },
 ];
@@ -113,7 +115,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               color: active(n.href) ? 'var(--accent)' : 'var(--text)',
             }}
           >
-            <span style={{ fontSize: 16 }}>{n.icon}</span> {t[n.key]}
+            <span style={{ fontSize: 16 }}>{n.icon}</span> {n.label ?? t[n.key]}
           </Link>
         ))}
 
@@ -153,14 +155,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
           </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Link href="/login" className="btn btn-ghost" style={{ padding: '9px 12px', fontSize: 13 }}>
-              {t.login}
-            </Link>
-            <Link href="/register" className="btn btn-primary" style={{ padding: '9px 12px', fontSize: 13 }}>
-              {t.register}
-            </Link>
-          </div>
+          <a href="/api/auth/steam" className="btn btn-primary" style={{ padding: '11px 12px', fontSize: 13, textDecoration: 'none' }}>
+            {lang === 'ru' ? 'Войти через Steam' : 'Sign in via Steam'}
+          </a>
         )}
       </aside>
 
@@ -260,7 +257,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             }}
           >
             <span style={{ fontSize: 18 }}>{n.icon}</span>
-            {t[n.key]}
+            {n.label ?? t[n.key]}
           </Link>
         ))}
       </nav>

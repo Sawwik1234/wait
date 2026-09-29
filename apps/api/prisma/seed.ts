@@ -232,6 +232,14 @@ async function main() {
   await prisma.ticketMessage.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.auditLog.deleteMany();
+  await prisma.idempotencyKey.deleteMany();
+  await prisma.battleRoundResult.deleteMany();
+  await prisma.battleParticipant.deleteMany();
+  await prisma.battle.deleteMany();
+  await prisma.userMission.deleteMany();
+  await prisma.userAchievement.deleteMany();
+  await prisma.mission.deleteMany();
+  await prisma.achievement.deleteMany();
   await prisma.session.deleteMany();
   await prisma.caseItem.deleteMany();
   await prisma.case.deleteMany();
@@ -328,6 +336,39 @@ async function main() {
     data: { userId: demo.id, amount: 5_000, type: 'WELCOME_BONUS', balanceAfter: 5_000 },
   });
   console.log('[seed] demo user: demo@casearena.local / demo1234');
+
+  // ---- missions ----
+  const MISSIONS = [
+    { code: 'first-open', title: 'Открой первый кейс', description: 'Открой любой кейс — начни свою коллекцию.', type: 'OPEN_CASES', target: 1, rewardAp: 100, sortOrder: 1 },
+    { code: 'open-5', title: 'Открой 5 кейсов', description: 'Пять открытий — уже характер.', type: 'OPEN_CASES', target: 5, rewardAp: 200, sortOrder: 2 },
+    { code: 'first-upgrade', title: 'Выиграй апгрейд', description: 'Улучши предмет через ⚡ Апгрейд.', type: 'WIN_UPGRADES', target: 1, rewardAp: 150, sortOrder: 3 },
+    { code: 'contracts-3', title: 'Заключи 3 контракта', description: 'Три контракта — три шанса на редкость.', type: 'DO_CONTRACTS', target: 3, rewardAp: 250, sortOrder: 4 },
+    { code: 'daily-1', title: 'Забери ежедневный бонус', description: 'Загляни на страницу 📅 Ежедневный бонус.', type: 'CLAIM_DAILY', target: 1, rewardAp: 100, sortOrder: 5 },
+    { code: 'get-epic', title: 'Получи Epic-предмет', description: 'Выбей предмет редкости Epic или Mythic.', type: 'GET_RARITY', target: 1, rewardAp: 300, rewardItemRarity: 'EPIC,MYTHIC', sortOrder: 6 },
+  ];
+  for (const m of MISSIONS) {
+    await prisma.mission.create({ data: m });
+  }
+  console.log(`[seed] missions: ${MISSIONS.length}`);
+
+  // ---- achievements ----
+  const ACHIEVEMENTS = [
+    { code: 'FIRST_CASE', title: 'Первая кровь', description: 'Открыть первый кейс', icon: '🎁', conditionType: 'OPEN_CASES', threshold: 1, xpReward: 50, sortOrder: 1 },
+    { code: 'CASES_10', title: 'Десяточка', description: 'Открыть 10 кейсов', icon: '📦', conditionType: 'OPEN_CASES', threshold: 10, xpReward: 100, sortOrder: 2 },
+    { code: 'CASES_50', title: 'Кейс-маньяк', description: 'Открыть 50 кейсов', icon: '🗃', conditionType: 'OPEN_CASES', threshold: 50, xpReward: 300, sortOrder: 3 },
+    { code: 'FIRST_UPGRADE', title: 'Апгрейдер', description: 'Выиграть первый апгрейд', icon: '⚡', conditionType: 'WIN_UPGRADES', threshold: 1, xpReward: 50, sortOrder: 4 },
+    { code: 'UPGRADES_10', title: 'Мастер апгрейда', description: 'Выиграть 10 апгрейдов', icon: '🔧', conditionType: 'WIN_UPGRADES', threshold: 10, xpReward: 250, sortOrder: 5 },
+    { code: 'FIRST_CONTRACT', title: 'Подписант', description: 'Заключить первый контракт', icon: '📜', conditionType: 'CONTRACTS', threshold: 1, xpReward: 50, sortOrder: 6 },
+    { code: 'CONTRACTS_10', title: 'Юрист', description: 'Заключить 10 контрактов', icon: '🗂', conditionType: 'CONTRACTS', threshold: 10, xpReward: 250, sortOrder: 7 },
+    { code: 'STREAK_3', title: 'Разогрев', description: 'Серия из 3 дней', icon: '🔥', conditionType: 'STREAK', threshold: 3, xpReward: 100, sortOrder: 8 },
+    { code: 'STREAK_7', title: 'Недельная смена', description: 'Серия из 7 дней', icon: '🌟', conditionType: 'STREAK', threshold: 7, xpReward: 250, sortOrder: 9 },
+    { code: 'MYTHIC_OWNER', title: 'Мифический владелец', description: 'Получить предмет Mythic', icon: '💎', conditionType: 'RARITY_OWNED', threshold: 1, xpReward: 500, sortOrder: 10 },
+    { code: 'COLLECTOR_30', title: 'Коллекционер', description: '30 предметов в коллекции', icon: '🎒', conditionType: 'COLLECTION_COUNT', threshold: 30, xpReward: 300, sortOrder: 11 },
+  ];
+  for (const a of ACHIEVEMENTS) {
+    await prisma.achievement.create({ data: a });
+  }
+  console.log(`[seed] achievements: ${ACHIEVEMENTS.length}`);
 
   // ---- bots with xp + starter inventories ----
   for (const [bi, bot] of BOTS.entries()) {

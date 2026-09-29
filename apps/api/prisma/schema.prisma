@@ -20,6 +20,7 @@ model User {
   email        String   @unique
   username     String   @unique
   passwordHash String
+  steamId      String?  @unique // set for Steam-authenticated players
   role         String   @default("USER") // USER | MODERATOR | ADMIN | SUPER_ADMIN
   isBot        Boolean  @default(false)
   xp           Int      @default(0)
@@ -38,6 +39,10 @@ model User {
   notifications  Notification[]
   tickets        Ticket[]
   ledger         Ledger[]
+  missions       UserMission[]
+  achievements   UserAchievement[]
+  battles        BattleParticipant[]
+  battlesCreated Battle[]            @relation("BattleCreator")
 }
 
 model Session {
@@ -93,6 +98,7 @@ model Item {
   opens     CaseOpen[]
   upgrades  Upgrade[]       @relation("targetItem")
   contracts Contract[]      @relation("outputItem")
+  battleDrops BattleRoundResult[]
 }
 
 model Case {
@@ -264,4 +270,129 @@ model AuditLog {
 model Setting {
   key   String @id
   value String
+}
+
+// ---------- progress: missions & achievements ----------
+
+model Mission {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  title            String
+  description      String
+  type             String // OPEN_CASES | WIN_UPGRADES | DO_CONTRACTS | CLAIM_DAILY | GET_RARITY
+  target           Int      @default(1)
+  rewardAp         Int      @default(0)
+  rewardItemRarity String? // optional item reward of this rarity
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+
+  users UserMission[]
+}
+
+model UserMission {
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  missionId   String
+  mission     Mission    @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  progress    Int        @default(0)
+  completedAt DateTime?
+  claimedAt   DateTime?
+
+  @@id([userId, missionId])
+  @@index([userId])
+}
+
+model Achievement {
+  id            String @id @default(uuid())
+  code          String @unique
+  title         String
+  description   String
+  icon          String @default("🏆")
+  conditionType String // OPEN_CASES | WIN_UPGRADES | CONTRACTS | STREAK | RARITY_OWNED | COLLECTION_COUNT
+  threshold     Int    @default(1)
+  xpReward      Int    @default(50)
+  sortOrder     Int    @default(0)
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+
+  @@id([userId, achievementId])
+  @@index([userId])
+}
+
+// ---------- idempotency ----------
+
+model IdempotencyKey {
+  id           String   @id @default(uuid())
+  key          String
+  userId       String
+  endpoint     String
+  responseJson String
+  createdAt    DateTime @default(now())
+
+  @@unique([key, userId, endpoint])
+  @@index([userId, createdAt])
+}
+
+// ---------- battles ----------
+
+model Battle {
+  id           String    @id @default(uuid())
+  creatorId    String
+  creator      User      @relation("BattleCreator", fields: [creatorId], references: [id])
+  status       String    @default("WAITING") // WAITING | RUNNING | FINISHED | CANCELLED
+  maxPlayers   Int // 2..4
+  rounds       Int // 1..10
+  casesJson    String // JSON array of case slugs, round r uses cases[r % len]
+  totalCost    Int // entry cost per player (sum of all rounds)
+  isPrivate    Boolean   @default(false)
+  inviteCode   String?
+  winnerId     String?
+  createdAt    DateTime  @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+
+  participants BattleParticipant[]
+  roundResults BattleRoundResult[]
+
+  @@index([status, createdAt])
+}
+
+model BattleParticipant {
+  id         String   @id @default(uuid())
+  battleId   String
+  battle     Battle   @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  userId     String
+  slot       Int
+  totalValue Int      @default(0)
+  joinedAt   DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results BattleRoundResult[]
+
+  @@unique([battleId, userId])
+  @@index([battleId])
+}
+
+model BattleRoundResult {
+  id              String @id @default(uuid())
+  battleId        String
+  battle          Battle            @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  participantId   String
+  participant     BattleParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  roundNo         Int
+  userId          String
+  itemId          String
+  item            Item              @relation(fields: [itemId], references: [id])
+  value           Int
+  inventoryItemId String @unique
+
+  @@index([battleId, roundNo])
 }

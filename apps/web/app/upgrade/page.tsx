@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { get, post } from '../../lib/api';
+import { get, postIdem } from '../../lib/api';
 import { usePoll } from '../../lib/hooks';
 import { ItemCard, Spinner } from '../../components/game';
 import { RARITY_COLOR, useStore } from '../../lib/store';
@@ -84,7 +84,7 @@ export default function UpgradePage() {
     setPhase('spin');
     const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     try {
-      const res = await post<RunRes>('/upgrade/run', { inventoryIds: selected, targetItemId: target.id });
+      const res = await postIdem<RunRes>('/upgrade/run', { inventoryIds: selected, targetItemId: target.id });
       setOutcome(res);
       // pointer lands in the green sector on success, red otherwise
       const winSector = (res.chanceShown / 100) * 360;

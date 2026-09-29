@@ -14,6 +14,9 @@ export type LedgerType =
   | 'CONTRACT_CONSUME'
   | 'CONTRACT_PAYOUT'
   | 'SELL_ITEM'
+  | 'MISSION_REWARD'
+  | 'BATTLE_JOIN'
+  | 'BATTLE_REFUND'
   | 'ADMIN_ADJUSTMENT';
 
 /**

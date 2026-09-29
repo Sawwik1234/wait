@@ -4,12 +4,16 @@ import { AppException } from '../common/app.exception';
 import { levelFromXp, ECONOMY } from '../common/economy';
 import { USERNAME_RE } from '../auth/auth.dto';
 import { hashPassword, verifyPassword } from '../auth/auth.service';
+import { AchievementsService } from '../achievements/achievements.service';
 
 const PUBLIC_USER = { id: true, username: true, xp: true, isBot: true, createdAt: true } as const;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly achievements: AchievementsService,
+  ) {}
 
   async me(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -54,6 +58,8 @@ export class UsersService {
     });
     const collectionValue = ownedIds.reduce((a, x) => a + x.item.value, 0);
 
+    const userAchievements = await this.achievements.publicList(user.id);
+
     return {
       ...user,
       level: levelFromXp(user.xp),
@@ -63,6 +69,7 @@ export class UsersService {
         opens,
         upgradeWins,
       },
+      achievements: userAchievements,
       recent,
       bestItem: best?.item ?? null,
     };

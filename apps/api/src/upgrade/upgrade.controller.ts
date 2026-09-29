@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { UpgradeService } from './upgrade.service';
@@ -21,8 +21,12 @@ export class UpgradeController {
   }
 
   @Post('run')
-  run(@CurrentUser('id') userId: string, @Body(new ZodPipe(RunDto)) body: z.infer<typeof RunDto>) {
-    return this.upgrades.run(userId, body.inventoryIds, body.targetItemId);
+  run(
+    @CurrentUser('id') userId: string,
+    @Body(new ZodPipe(RunDto)) body: z.infer<typeof RunDto>,
+    @Headers('x-idempotency-key') idemKey?: string,
+  ) {
+    return this.upgrades.run(userId, body.inventoryIds, body.targetItemId, idemKey);
   }
 
   @Public()

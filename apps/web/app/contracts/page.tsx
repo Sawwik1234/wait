@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { get, post } from '../../lib/api';
+import { get, postIdem, post } from '../../lib/api';
 import { usePoll } from '../../lib/hooks';
 import { ItemCard, Spinner } from '../../components/game';
 import { RARITY_COLOR, useStore } from '../../lib/store';
@@ -72,7 +72,7 @@ export default function ContractsPage() {
     if (selected.length < 3) return;
     setPhase('spin');
     try {
-      const res = await post<RunRes>('/contracts/run', { inventoryIds: selected });
+      const res = await postIdem<RunRes>('/contracts/run', { inventoryIds: selected });
       setTimeout(() => {
         setOutcome(res);
         setPhase('done');

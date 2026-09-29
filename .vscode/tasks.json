@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "shell": {
+      "executable": "cmd.exe",
+      "args": ["/d", "/s", "/c"]
+    }
+  },
+  "tasks": [
+    {
+      "label": "API: dev (NestJS :4000)",
+      "type": "shell",
+      "command": "npm run dev -w api",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "dev" }
+    },
+    {
+      "label": "WEB: dev (Next :3000)",
+      "type": "shell",
+      "command": "npm run dev -w web",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "dev" }
+    },
+    {
+      "label": "▶ CaseArena: full stack",
+      "dependsOn": ["API: dev (NestJS :4000)", "WEB: dev (Next :3000)"],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "TEST: vitest (api)",
+      "type": "shell",
+      "command": "npm run test -w api",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "DB: push + seed (SQLite)",
+      "type": "shell",
+      "command": "npm run db:push -w api && npm run db:seed -w api",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

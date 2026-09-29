@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug API (NestJS :4000)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/api",
+      "runtimeExecutable": "npx",
+      "windows": { "runtimeExecutable": "npx.cmd" },
+      "runtimeArgs": ["tsx", "src/main.ts"],
+      "env": { "NODE_ENV": "development" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Debug Web (Next :3000)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/apps/web",
+      "runtimeExecutable": "npm",
+      "windows": { "runtimeExecutable": "npm.cmd" },
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "▶ Debug: API + Web",
+      "configurations": ["Debug API (NestJS :4000)", "Debug Web (Next :3000)"]
+    }
+  ]
+}

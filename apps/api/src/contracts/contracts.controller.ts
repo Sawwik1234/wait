@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Headers, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ContractsService } from './contracts.service';
@@ -21,7 +21,11 @@ export class ContractsController {
   }
 
   @Post('run')
-  run(@CurrentUser('id') userId: string, @Body(new ZodPipe(RunDto)) body: z.infer<typeof RunDto>) {
-    return this.contracts.run(userId, body.inventoryIds);
+  run(
+    @CurrentUser('id') userId: string,
+    @Body(new ZodPipe(RunDto)) body: z.infer<typeof RunDto>,
+    @Headers('x-idempotency-key') idemKey?: string,
+  ) {
+    return this.contracts.run(userId, body.inventoryIds, idemKey);
   }
 }

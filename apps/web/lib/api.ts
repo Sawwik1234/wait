@@ -61,3 +61,18 @@ export const post = <T>(path: string, body?: unknown) =>
   api<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 export const patch = <T>(path: string, body?: unknown) =>
   api<T>(path, { method: 'PATCH', body: body === undefined ? undefined : JSON.stringify(body) });
+
+/**
+ * POST with an idempotency key: retries/double-clicks of the same logical
+ * action can never charge twice — the server replays the stored result.
+ */
+export function postIdem<T>(path: string, body?: unknown): Promise<T> {
+  const key = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `idem-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return api<T>(path, {
+    method: 'POST',
+    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: { 'x-idempotency-key': key },
+  });
+}

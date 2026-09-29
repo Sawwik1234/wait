@@ -4,7 +4,11 @@ import { PrismaClient } from '@prisma/client';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    super({ log: ['error', 'warn'] });
+    super({
+      log: ['error', 'warn'],
+      // zero-config dev fallback: SQLite next to the schema when DATABASE_URL is unset
+      ...(process.env.DATABASE_URL ? {} : { datasourceUrl: 'file:./dev.db' }),
+    });
   }
 
   async onModuleInit() {

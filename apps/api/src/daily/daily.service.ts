@@ -4,6 +4,8 @@ import { RandomService } from '../common/random.service';
 import { BalanceService } from '../balance/balance.service';
 import { AppException } from '../common/app.exception';
 import { ECONOMY } from '../common/economy';
+import { MissionsService } from '../missions/missions.service';
+import { AchievementsService } from '../achievements/achievements.service';
 
 export interface DailyRewardDay {
   day: number;
@@ -33,6 +35,8 @@ export class DailyService {
     private readonly prisma: PrismaService,
     private readonly random: RandomService,
     private readonly balance: BalanceService,
+    private readonly missions: MissionsService,
+    private readonly achievements: AchievementsService,
   ) {}
 
   async status(userId: string) {
@@ -113,6 +117,12 @@ export class DailyService {
       await this.balance.grantXp(userId, ECONOMY.XP.DAILY, tx);
 
       return { day: cycleDay, streak, reward, itemId, amount };
+    }).then(async (res) => {
+      try {
+        await this.missions.track(userId, 'CLAIM_DAILY', 1);
+        await this.achievements.evaluate(userId, 'DAILY');
+      } catch {}
+      return res;
     });
   }
 

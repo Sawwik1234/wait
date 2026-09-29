@@ -4,6 +4,9 @@ import { RandomService } from '../common/random.service';
 import { BalanceService } from '../balance/balance.service';
 import { AppException } from '../common/app.exception';
 import { ECONOMY, contractDistribution, contractPool } from '../common/economy';
+import { IdempotencyService } from '../common/idempotency.service';
+import { MissionsService } from '../missions/missions.service';
+import { AchievementsService } from '../achievements/achievements.service';
 
 interface PoolEntry {
   item: { id: string; slug: string; name: string; image: string; rarity: string; value: number };
@@ -16,6 +19,9 @@ export class ContractsService {
     private readonly prisma: PrismaService,
     private readonly random: RandomService,
     private readonly balance: BalanceService,
+    private readonly idempotency: IdempotencyService,
+    private readonly missions: MissionsService,
+    private readonly achievements: AchievementsService,
   ) {}
 
   /** Compute the outcome pool + exact chances for a given input cost. */
@@ -53,11 +59,14 @@ export class ContractsService {
    * EV is 81% of S. Distribution is computed server-side and never shown
    * as "better" than it is.
    */
-  async run(userId: string, inventoryIds: string[]) {
+  async run(userId: string, inventoryIds: string[], idemKey?: string) {
     if (inventoryIds.length < ECONOMY.CONTRACT_MIN_INPUTS || inventoryIds.length > ECONOMY.CONTRACT_MAX_INPUTS) {
       throw new AppException('VALIDATION', `Select ${ECONOMY.CONTRACT_MIN_INPUTS}–${ECONOMY.CONTRACT_MAX_INPUTS} items`);
     }
+    return this.idempotency.run(userId, 'contracts.run', idemKey, () => this._run(userId, inventoryIds));
+  }
 
+  private async _run(userId: string, inventoryIds: string[]) {
     return this.prisma.$transaction(async (tx) => {
       const inputs = await tx.inventoryItem.findMany({
         where: { id: { in: inventoryIds }, userId, status: 'OWNED' },
@@ -139,6 +148,12 @@ export class ContractsService {
         roll,
         seed,
       };
+    }).then(async (res) => {
+      try {
+        await this.missions.track(userId, 'DO_CONTRACTS', 1);
+        await this.achievements.evaluate(userId, 'CONTRACT');
+      } catch {}
+      return res;
     });
   }
 }

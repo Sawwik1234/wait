@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { CasesService } from './cases.service';
@@ -42,8 +42,9 @@ export class CasesController {
     @CurrentUser('id') userId: string,
     @Param('slug') slug: string,
     @Body(new ZodPipe(OpenDto)) body: z.infer<typeof OpenDto>,
+    @Headers('x-idempotency-key') idemKey?: string,
   ) {
-    return this.cases.open(userId, slug, body.count);
+    return this.cases.open(userId, slug, body.count, idemKey);
   }
 
   @Public()

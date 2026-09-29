@@ -14,6 +14,7 @@ interface Profile {
   createdAt: string;
   level: { level: number; progress: number };
   stats: { collectionCount: number; collectionValue: number; opens: number; upgradeWins: number };
+  achievements: { code: string; title: string; icon: string }[];
   recent: { id: string; item: { slug: string; name: string; image: string; rarity: string; value: number } }[];
   bestItem: { slug: string; name: string; image: string; rarity: string; value: number } | null;
 }
@@ -61,6 +62,26 @@ export default function ProfilePage() {
         <StatCard label={t.collection} value={`${p.stats.collectionValue.toLocaleString('ru')} AP`} accent="var(--accent)" />
         <StatCard label={t.opens} value={p.stats.opens} />
         <StatCard label={t.wins} value={p.stats.upgradeWins} accent="var(--success)" />
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 12 }}>🏆 {lang === 'ru' ? 'Ачивки' : 'Achievements'}</h2>
+        {p.achievements.length === 0 ? (
+          <div className="card" style={{ padding: 18, textAlign: 'center', color: 'var(--text-dim)', fontSize: 13 }}>
+            {lang === 'ru' ? 'Пока нет ачивок — открывай кейсы и апгрейди!' : 'No achievements yet — open cases and upgrade!'}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {p.achievements.map((a) => (
+              <div key={a.code} className="card" style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, borderColor: 'var(--warning)' }}>
+                <span style={{ fontSize: 18 }}>{a.icon}</span>
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700 }}>{a.title}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section>

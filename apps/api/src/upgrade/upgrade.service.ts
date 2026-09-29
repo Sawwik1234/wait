@@ -4,6 +4,9 @@ import { RandomService } from '../common/random.service';
 import { BalanceService } from '../balance/balance.service';
 import { AppException } from '../common/app.exception';
 import { ECONOMY, upgradeChanceBp } from '../common/economy';
+import { IdempotencyService } from '../common/idempotency.service';
+import { MissionsService } from '../missions/missions.service';
+import { AchievementsService } from '../achievements/achievements.service';
 
 @Injectable()
 export class UpgradeService {
@@ -11,6 +14,9 @@ export class UpgradeService {
     private readonly prisma: PrismaService,
     private readonly random: RandomService,
     private readonly balance: BalanceService,
+    private readonly idempotency: IdempotencyService,
+    private readonly missions: MissionsService,
+    private readonly achievements: AchievementsService,
   ) {}
 
   /** Targets available for a given input sum (value >= 1.2 × input). */
@@ -39,10 +45,14 @@ export class UpgradeService {
    * Real chance = (S / T) × (1 − fee), clamped. EV for the player is −5% of S —
    * the honest house edge of the upgrade mode.
    */
-  async run(userId: string, inventoryIds: string[], targetItemId: string) {
+  async run(userId: string, inventoryIds: string[], targetItemId: string, idemKey?: string) {
     if (inventoryIds.length < 1 || inventoryIds.length > 5) {
       throw new AppException('VALIDATION', 'Select 1–5 items');
     }
+    return this.idempotency.run(userId, 'upgrade.run', idemKey, () => this._run(userId, inventoryIds, targetItemId));
+  }
+
+  private async _run(userId: string, inventoryIds: string[], targetItemId: string) {
 
     return this.prisma.$transaction(async (tx) => {
       const inputs = await tx.inventoryItem.findMany({
@@ -125,6 +135,14 @@ export class UpgradeService {
         roll,
         seed,
       };
+    }).then(async (res) => {
+      try {
+        if (res.success) {
+          await this.missions.track(userId, 'WIN_UPGRADES', 1);
+          await this.achievements.evaluate(userId, 'UPGRADE');
+        }
+      } catch {}
+      return res;
     });
   }
 

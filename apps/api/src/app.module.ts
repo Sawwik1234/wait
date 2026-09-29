@@ -20,6 +20,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SupportModule } from './support/support.module';
 import { AdminModule } from './admin/admin.module';
 import { HealthModule } from './health/health.module';
+import { MissionsModule } from './missions/missions.module';
+import { AchievementsModule } from './achievements/achievements.module';
+import { BattlesModule } from './battles/battles.module';
 
 @Module({
   imports: [
@@ -37,6 +40,9 @@ import { HealthModule } from './health/health.module';
     StatsModule,
     NotificationsModule,
     SupportModule,
+    MissionsModule,
+    AchievementsModule,
+    BattlesModule,
     AdminModule,
     HealthModule,
   ],

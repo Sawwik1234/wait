@@ -5,6 +5,9 @@ import { RandomService } from '../common/random.service';
 import { BalanceService } from '../balance/balance.service';
 import { AppException } from '../common/app.exception';
 import { ECONOMY, tableEv } from '../common/economy';
+import { IdempotencyService } from '../common/idempotency.service';
+import { MissionsService } from '../missions/missions.service';
+import { AchievementsService } from '../achievements/achievements.service';
 
 export interface OpenResult {
   inventoryItemId: string;
@@ -26,6 +29,9 @@ export class CasesService {
     private readonly prisma: PrismaService,
     private readonly random: RandomService,
     private readonly balance: BalanceService,
+    private readonly idempotency: IdempotencyService,
+    private readonly missions: MissionsService,
+    private readonly achievements: AchievementsService,
   ) {}
 
   list(params: { q?: string; category?: string; sort?: string }) {
@@ -75,7 +81,11 @@ export class CasesService {
    * balance check → atomic spend → per-open seeded RNG → inventory items.
    * Everything in ONE transaction; the client can never influence outcomes.
    */
-  async open(userId: string, slug: string, count: number): Promise<{ results: OpenResult[]; balance: number; xp: number }> {
+  async open(userId: string, slug: string, count: number, idemKey?: string): Promise<{ results: OpenResult[]; balance: number; xp: number }> {
+    return this.idempotency.run(userId, `cases.open:${slug}`, idemKey, () => this._open(userId, slug, count));
+  }
+
+  private async _open(userId: string, slug: string, count: number): Promise<{ results: OpenResult[]; balance: number; xp: number }> {
     const data = await this.prisma.case.findUnique({
       where: { slug },
       include: { items: { include: { item: true } } },
@@ -140,6 +150,16 @@ export class CasesService {
       await this.balance.grantXp(userId, xp, tx);
 
       return { results, balance, xp };
+    }).then(async (res) => {
+      // post-tx hooks: missions + achievements (non-blocking on failure)
+      try {
+        await this.missions.track(userId, 'OPEN_CASES', count);
+        for (const r of res.results) {
+          await this.missions.track(userId, 'GET_RARITY', 1, r.item.rarity);
+        }
+        await this.achievements.evaluate(userId, 'OPEN');
+      } catch {}
+      return res;
     });
   }
 

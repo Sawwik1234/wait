@@ -13,7 +13,8 @@
     "start": "concurrently -n api,web \"npm run start -w api\" \"npm run start -w web\"",
     "db:push": "npm run db:push -w api",
     "db:seed": "npm run db:seed -w api",
-    "test": "npm run test -w api"
+    "test": "npm run test -w api",
+    "setup": "npm install && npm run db:push -w api && npm run db:seed -w api"
   },
   "devDependencies": {
     "concurrently": "^9.0.0"

@@ -21,8 +21,12 @@ docs/
    (см. docs/deployment.md). Причина: нулевые зависимости для локального запуска.
 2. **Redis не используется в фазе 1.** Кэш лидерборда — 30-секундный in-memory.
    Точка расширения: `LeaderboardService.cache`.
-3. **Realtime (Socket.IO) отложен** вместе с боями. Лента дропов и уведомления
-   работают на polling (7–10 c). Точки подключения сокетов описаны в roadmap.
+3. **Realtime (v2)**: Socket.IO gateway `/realtime` для боёв (комнаты `battle:{id}`)
+   + автоматический фолбэк на REST-поллинг на клиенте. Лента дропов — polling.
+4. **Идемпотентность (v2)**: таблица `IdempotencyKey` + `IdempotencyService`;
+   ключ `x-idempotency-key` опционален, но фронт шлёт его на все игровые мутации.
+5. **Steam OpenID (v2)**: игроки входят только через Steam; staff — пароль +
+   секретный код. `steamId @unique` в User; регистрация по email отключена.
 4. **Roll-значения хранятся как TEXT** (uint32 не влезает в signed Int32 SQLite).
 5. **tsx не эмитит decorator metadata** → API в dev компилируется через `tsc --watch`
    + `node --watch` (CJS), прод — `tsc`-сборка в `dist/`.

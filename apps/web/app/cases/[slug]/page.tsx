@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { get, post } from '../../../lib/api';
+import { get, postIdem, post } from '../../../lib/api';
 import { usePoll } from '../../../lib/hooks';
 import { ItemCard, RarityBadge, Spinner, type ItemLike } from '../../../components/game';
 import { RARITY_COLOR, useStore } from '../../../lib/store';
@@ -119,7 +119,7 @@ export default function CasePage() {
       setResults([]);
       setPhase('spin');
       try {
-        const res = await post<OpenResult>(`/cases/${slug}/open`, { count });
+        const res = await postIdem<OpenResult>(`/cases/${slug}/open`, { count });
         setBalance(res.balance);
         setResults(res.results);
         if (count === 1) {
