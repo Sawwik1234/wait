@@ -37,6 +37,18 @@ export default function BattleRoomPage() {
   const [connected, setConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [seenLen, setSeenLen] = useState(0);
+  const [shaking, setShaking] = useState(false);
+  const roundsPlayed = live?.players[0]?.rounds.length ?? 0;
+
+  useEffect(() => {
+    if (roundsPlayed > seenLen) {
+      setSeenLen(roundsPlayed);
+      setShaking(true);
+      const tm = setTimeout(() => setShaking(false), 420);
+      return () => clearTimeout(tm);
+    }
+  }, [roundsPlayed, seenLen]);
 
   // merge server data as baseline
   useEffect(() => {
@@ -109,10 +121,20 @@ export default function BattleRoomPage() {
   const isCreator = me?.username === b.players[0]?.username && b.players[0];
   const joined = me ? b.players.some((p) => p.username === me.username) : false;
   const canJoin = b.status === 'WAITING' && !joined && b.players.length < b.maxPlayers && me;
+  const curRound = Math.min(b.rounds, roundsPlayed + (b.status === 'RUNNING' ? 1 : 0));
+  const lastDrops = b.players.map((p) => p.rounds[p.rounds.length - 1]).filter(Boolean);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <Link href="/battles" style={{ color: 'var(--text-dim)', fontSize: 13 }}>← Бои</Link>
+    <div className={`arena ${shaking ? 'shake' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: 18 }}>
+      <Link href="/battles" style={{ color: 'var(--text-dim)', fontSize: 13, position: 'relative', zIndex: 1 }}>← Бои</Link>
+
+      {/* round header */}
+      <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+        <div className="eyebrow">{b.cases.join(' + ')} × {b.rounds}</div>
+        <div className="h-display" style={{ fontSize: 'clamp(30px, 5vw, 46px)', margin: '2px 0 0', letterSpacing: '.06em' }}>
+          ROUND {String(Math.max(1, curRound)).padStart(2, '0')}
+        </div>
+      </div>
 
       <section className="card" style={{ padding: 18, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <b style={{ fontSize: 17 }}>⚔ {b.cases.join(' + ')} × {b.rounds}</b>
@@ -187,8 +209,28 @@ export default function BattleRoomPage() {
         </section>
       )}
 
+      {/* item reveal — latest round */}
+      {b.status !== 'WAITING' && lastDrops.length > 0 && (
+        <section key={roundsPlayed} className="round-reveal" style={{ textAlign: 'center', position: 'relative', zIndex: 1, padding: '14px 0 6px' }}>
+          <div className="eyebrow">ITEM REVEAL · ROUND {String(roundsPlayed).padStart(2, '0')}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 22, marginTop: 10, flexWrap: 'wrap' }}>
+            {lastDrops.map((d, i) => {
+              const c = RARITY_COLOR[d.item.rarity] ?? '#888';
+              return (
+                <div key={i} style={{ textAlign: 'center' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={d.item.image} alt="" className="floaty" style={{ width: 86, height: 64, objectFit: 'contain', filter: `drop-shadow(0 10px 24px ${c}44)` }} />
+                  <div style={{ color: c, fontWeight: 800, fontSize: 12.5, marginTop: 4 }}>{d.item.name}</div>
+                  <div style={{ color: 'var(--text-dim)', fontSize: 10.5 }}>{d.item.value} AP</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* players grid */}
-      <section style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(200px, 1fr))`, gap: 12 }}>
+      <section style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(200px, 1fr))`, gap: 12, position: 'relative', zIndex: 1 }}>
         {b.players.map((p) => {
           const isWinner = b.winnerUsername === p.username;
           return (
@@ -211,7 +253,7 @@ export default function BattleRoomPage() {
                 {p.rounds.map((r, i) => {
                   const c = RARITY_COLOR[r.item.rarity] ?? '#888';
                   return (
-                    <div key={i} className="pop-in" style={{ textAlign: 'center', padding: 5, borderRadius: 8, border: `1px solid ${c}`, width: 52 }} title={`${r.item.name} · ${r.item.value} AP`}>
+                    <div key={i} className="round-reveal" style={{ textAlign: 'center', padding: 5, borderRadius: 8, border: `1px solid ${c}`, width: 52 }} title={`${r.item.name} · ${r.item.value} AP`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={r.item.image} alt="" style={{ width: 40, height: 30, objectFit: 'contain' }} />
                       <div style={{ fontSize: 9.5, color: c, fontWeight: 700 }}>{r.item.value}</div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { get, postIdem, post } from '../../lib/api';
 import { usePoll } from '../../lib/hooks';
 import { ItemCard, Spinner } from '../../components/game';
+import { Magnetic } from '../../components/effects';
 import { RARITY_COLOR, useStore } from '../../lib/store';
 import { DICT } from '../../lib/i18n';
 
@@ -89,8 +90,11 @@ export default function ContractsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>📜 {t.contracts}</h1>
-      <div style={{ color: 'var(--text-dim)', fontSize: 13 }}>{t.contractHint}</div>
+      <header>
+        <div className="eyebrow">CRAFTING STATION</div>
+        <h1 className="h-display" style={{ fontSize: 'clamp(26px, 4vw, 38px)', margin: '4px 0 6px' }}>📜 {t.contracts}</h1>
+        <div style={{ color: 'var(--text-dim)', fontSize: 13 }}>{t.contractHint}</div>
+      </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 1fr)', gap: 16, alignItems: 'start' }} className="contract-grid">
         {/* picker */}
@@ -132,6 +136,23 @@ export default function ContractsPage() {
         {/* center: cube + outcomes */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="card" style={{ padding: 20, textAlign: 'center' }}>
+            <div className="ct-slots" style={{ marginBottom: 14 }}>
+              {Array.from({ length: 5 }).map((_, i) => {
+                const it = selItems[i];
+                return it ? (
+                  <div key={it.id} className="ct-slot filled" title={it.item.name}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={it.item.image} alt="" style={{ width: 58, height: 44, objectFit: 'contain' }} />
+                    <span style={{ position: 'absolute', bottom: 4, left: 0, right: 0, fontSize: 8.5, color: RARITY_COLOR[it.item.rarity] }}>
+                      {it.item.value} AP
+                    </span>
+                  </div>
+                ) : (
+                  <div key={`empty-${i}`} className="ct-slot">＋</div>
+                );
+              })}
+            </div>
+            <div className="ct-arrow" aria-hidden>↓</div>
             <div
               className={phase === 'spin' ? 'cube-shake' : ''}
               style={{
@@ -152,7 +173,7 @@ export default function ContractsPage() {
             </div>
 
             {outcome && phase === 'done' ? (
-              <div className="pop-in" style={{ marginTop: 12 }}>
+              <div className="ct-result" style={{ marginTop: 12 }}>
                 <ItemCard item={outcome.output} glow />
               </div>
             ) : (
@@ -166,9 +187,11 @@ export default function ContractsPage() {
                     <span style={{ color: 'var(--text-dim)' }}> ({sum > 0 ? Math.round((ev / sum) * 100) : 81}%)</span>
                   </div>
                 )}
-                <button className="btn btn-primary" style={{ marginTop: 12, padding: '12px 30px', fontSize: 15 }} disabled={selected.length < 3 || phase === 'spin'} onClick={run}>
-                  {phase === 'spin' ? '…' : `📜 ${t.contractMake}`}
-                </button>
+                <Magnetic>
+                  <button className="btn btn-primary" style={{ marginTop: 12, padding: '12px 32px', fontSize: 15 }} disabled={selected.length < 3 || phase === 'spin'} onClick={run}>
+                    {phase === 'spin' ? '…' : `▸ ${t.contractMake}`}
+                  </button>
+                </Magnetic>
               </>
             )}
           </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { get, postIdem } from '../../lib/api';
 import { usePoll } from '../../lib/hooks';
 import { ItemCard, Spinner } from '../../components/game';
+import { Magnetic } from '../../components/effects';
 import { RARITY_COLOR, useStore } from '../../lib/store';
 import { DICT } from '../../lib/i18n';
 
@@ -108,13 +109,17 @@ export default function UpgradePage() {
   if (!data) return <Spinner />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>⚡ {t.upgrade}</h1>
-      <div style={{ color: 'var(--text-dim)', fontSize: 13 }}>
-        {lang === 'ru'
-          ? 'Честный шанс = (сумма предметов ÷ цена цели) × 0.95. Комиссия площадки — 5%.'
-          : 'Fair chance = (item sum ÷ target price) × 0.95. House fee is 5%.'}
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, position: 'relative' }}>
+      <div className="grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.3, pointerEvents: 'none' }} />
+      <header style={{ position: 'relative' }}>
+        <div className="eyebrow">UPGRADE CORE</div>
+        <h1 className="h-display" style={{ fontSize: 'clamp(26px, 4vw, 38px)', margin: '4px 0 6px' }}>⚡ {t.upgrade}</h1>
+        <div style={{ color: 'var(--text-dim)', fontSize: 13 }}>
+          {lang === 'ru'
+            ? 'Честный шанс = (сумма предметов ÷ цена цели) × 0.95. Комиссия площадки — 5%.'
+            : 'Fair chance = (item sum ÷ target price) × 0.95. House fee is 5%.'}
+        </div>
+      </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px minmax(0, 1fr)', gap: 16, alignItems: 'start' }} className="upgrade-grid">
         {/* inventory picker */}
@@ -153,9 +158,25 @@ export default function UpgradePage() {
           )}
         </section>
 
-        {/* wheel */}
-        <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        {/* core — sci-fi circular interface */}
+        <section className="up-stage" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
           <div style={{ position: 'relative', width: 210, height: 210 }}>
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', inset: -18, borderRadius: '50%',
+                border: '1px dashed rgba(255,255,255,.13)',
+                animation: phase === 'spin' ? 'spin-slow 1.2s linear infinite' : 'spin-slow 30s linear infinite',
+              }}
+            />
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute', inset: -34, borderRadius: '50%',
+                background: `radial-gradient(circle, ${(target && RARITY_COLOR[target.rarity]) || 'var(--accent)'}14, transparent 65%)`,
+                filter: 'blur(6px)',
+              }}
+            />
             <div
               style={{
                 width: '100%',
@@ -190,12 +211,14 @@ export default function UpgradePage() {
             </div>
           </div>
 
-          <button className="btn btn-primary" style={{ padding: '12px 34px', fontSize: 15 }} disabled={!target || phase === 'spin' || selected.length === 0} onClick={run}>
-            {phase === 'spin' ? '…' : `⚡ ${t.startUpgrade}`}
-          </button>
+          <Magnetic>
+            <button className="btn btn-primary" style={{ padding: '13px 38px', fontSize: 15 }} disabled={!target || phase === 'spin' || selected.length === 0} onClick={run}>
+              {phase === 'spin' ? '…' : `▸ ${t.startUpgrade}`}
+            </button>
+          </Magnetic>
 
           {phase === 'done' && outcome && (
-            <div className={`card pop-in ${outcome.success ? 'glow-uncommon' : ''}`} style={{ padding: 14, textAlign: 'center', borderColor: outcome.success ? 'var(--success)' : 'var(--danger)' }}>
+            <div className={`card round-reveal ${outcome.success ? 'glow-uncommon' : ''}`} style={{ padding: 14, textAlign: 'center', borderColor: outcome.success ? 'var(--success)' : 'var(--danger)' }}>
               <div style={{ fontWeight: 800, color: outcome.success ? 'var(--success)' : 'var(--danger)' }}>
                 {outcome.success ? t.upgradeWin : t.upgradeFail}
               </div>

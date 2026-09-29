@@ -128,7 +128,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               color: active(n.href) ? 'var(--accent)' : 'var(--text)',
             }}
           >
-            <span style={{ fontSize: 16 }}>{n.icon}</span> {n.label ?? t[n.key]}
+            <span style={{ fontSize: 16 }}>{n.icon}</span> {n.label ?? (t[n.key] as string)}
           </Link>
         ))}
 
@@ -270,7 +270,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             }}
           >
             <span style={{ fontSize: 18 }}>{n.icon}</span>
-            {n.label ?? t[n.key]}
+            {n.label ?? (t[n.key] as string)}
           </Link>
         ))}
       </nav>

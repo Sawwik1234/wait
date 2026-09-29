@@ -92,7 +92,10 @@ export default function BattlesPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>⚔ {lang === 'ru' ? 'Бои кейсами' : 'Case Battles'}</h1>
+        <div>
+          <div className="eyebrow">VIRTUAL COMPETITIVE ARENA · NO REAL MONEY</div>
+          <h1 className="h-display" style={{ fontSize: 'clamp(26px, 4vw, 38px)', margin: '4px 0 0' }}>⚔ {lang === 'ru' ? 'Бои кейсами' : 'Case Battles'}</h1>
+        </div>
         <div style={{ flex: 1 }} />
         <button className="btn btn-primary" style={{ padding: '10px 22px' }} onClick={() => setCreating(!creating)}>
           + {lang === 'ru' ? 'Создать бой' : 'Create battle'}
@@ -180,9 +183,9 @@ export default function BattlesPage() {
           {lang === 'ru' ? 'Пока пусто — создай первый бой!' : 'Empty — create the first battle!'}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {battles.filter((b) => filter === 'ALL' || b.status === filter).map((b) => (
-            <div key={b.id} className="card card-hover" style={{ padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', cursor: 'pointer' }} onClick={() => router.push(`/battles/${b.id}`)}>
+        <div className="arena" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 10 }}>
+          {battles.filter((b) => filter === 'ALL' || b.status === filter).map((b, i) => (
+            <div key={b.id} className="card card-hover reveal" style={{ animationDelay: `${i * 45}ms`, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', cursor: 'pointer' }} onClick={() => router.push(`/battles/${b.id}`)}>
               <b style={{ fontSize: 14 }}>{b.cases.join('+')} × {b.rounds}</b>
               <span className="chip" style={{ fontSize: 10.5, color: b.status === 'WAITING' ? 'var(--warning)' : b.status === 'RUNNING' ? 'var(--accent)' : 'var(--text-dim)' }}>
                 {b.status}

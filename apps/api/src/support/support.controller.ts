@@ -5,7 +5,7 @@ import { SupportService } from './support.service';
 import { CurrentUser, Roles } from '../common/decorators';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 
-const Category = z.enum(['BUG', 'ACCOUNT', 'IDEA', 'OTHER']);
+const Category = z.enum(['ACCOUNT', 'COLLECTION', 'CASES', 'TECHNICAL', 'MODERATION', 'BUG', 'IDEA', 'OTHER']);
 
 const CreateDto = z.object({
   subject: z.string().min(4).max(120),

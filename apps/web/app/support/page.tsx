@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Support (spec §15): control-terminal interface. Hero "NEED HELP?",
+ * category tiles ACCOUNT / COLLECTION / CASES / TECHNICAL / MODERATION
+ * (no payments — the platform has no money), glass chat for tickets.
+ */
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { post } from '../../lib/api';
@@ -22,6 +28,21 @@ interface Ticket {
   messages: Msg[];
 }
 
+const CATS = [
+  { id: 'ACCOUNT', icon: '👤' },
+  { id: 'COLLECTION', icon: '🗂' },
+  { id: 'CASES', icon: '📦' },
+  { id: 'TECHNICAL', icon: '🛠' },
+  { id: 'MODERATION', icon: '🛡' },
+] as const;
+const CAT_KEY: Record<string, 'catAccount' | 'catCollection' | 'catCases' | 'catTechnical' | 'catModeration'> = {
+  ACCOUNT: 'catAccount',
+  COLLECTION: 'catCollection',
+  CASES: 'catCases',
+  TECHNICAL: 'catTechnical',
+  MODERATION: 'catModeration',
+};
+
 export default function SupportPage() {
   const router = useRouter();
   const lang = useStore((s) => s.lang);
@@ -32,7 +53,7 @@ export default function SupportPage() {
   const { data, reload } = usePoll<Ticket[]>('/support/tickets', 8000);
   const [creating, setCreating] = useState(false);
   const [subject, setSubject] = useState('');
-  const [category, setCategory] = useState('OTHER');
+  const [category, setCategory] = useState<string>('ACCOUNT');
   const [text, setText] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
@@ -52,24 +73,44 @@ export default function SupportPage() {
   const open = data.find((x) => x.id === openId) ?? null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>🎧 {t.support}</h1>
-        <div style={{ flex: 1 }} />
-        <button className="btn btn-primary" style={{ padding: '9px 18px', fontSize: 13 }} onClick={() => setCreating(true)}>
-          + {t.newTicket}
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* terminal header */}
+      <div className="card term" style={{ overflow: 'hidden' }}>
+        <div className="term-head"><i /><i /><i /></div>
+        <div style={{ padding: '26px 22px', textAlign: 'center' }}>
+          <div className="eyebrow">SUPPORT TERMINAL</div>
+          <h1 className="h-display" style={{ fontSize: 'clamp(28px, 5vw, 44px)', margin: '6px 0 10px' }}>{t.needHelp}</h1>
+          <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
+            {lang === 'ru'
+              ? 'Ответим в тикете — уведомление придёт в раздел «Уведомления».'
+              : 'We reply in the ticket — you will get a notification.'}
+          </div>
+        </div>
+      </div>
+
+      {/* category tiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+        {CATS.map((c) => (
+          <div
+            key={c.id}
+            className="term-cat"
+            style={{ borderColor: category === c.id && creating ? 'var(--accent)' : undefined }}
+            onClick={() => {
+              setCategory(c.id);
+              setCreating(true);
+            }}
+          >
+            <div style={{ fontSize: 20 }}>{c.icon}</div>
+            <div style={{ fontWeight: 800, fontSize: 12.5, marginTop: 4, letterSpacing: '.08em' }}>{t[CAT_KEY[c.id]]}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>{c.id}</div>
+          </div>
+        ))}
       </div>
 
       {creating && (
         <div className="card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 13 }}>{t.newTicket} · {t[CAT_KEY[category]]}</div>
           <input className="input" placeholder={t.ticketSubject} value={subject} onChange={(e) => setSubject(e.target.value)} />
-          <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="BUG">BUG</option>
-            <option value="ACCOUNT">ACCOUNT</option>
-            <option value="IDEA">IDEA</option>
-            <option value="OTHER">OTHER</option>
-          </select>
           <textarea className="input" rows={4} placeholder={t.ticketMessage} value={text} onChange={(e) => setText(e.target.value)} />
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -82,7 +123,7 @@ export default function SupportPage() {
                   setSubject('');
                   setText('');
                   reload();
-                  toast('✅', 'ok');
+                  toast('✓', 'ok');
                 } catch (e) {
                   toast(e instanceof Error ? e.message : t.error, 'err');
                 }
@@ -102,7 +143,7 @@ export default function SupportPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => setOpenId(null)}>←</button>
             <b>{open.subject}</b>
-            <span className="chip" style={{ fontSize: 10 }}>{open.status}</span>
+            <span className="chip" style={{ fontSize: 10 }}>{open.category}</span>
             <div style={{ flex: 1 }} />
             {open.status !== 'CLOSED' && (
               <button
@@ -120,20 +161,11 @@ export default function SupportPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
             {open.messages.map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  alignSelf: m.isStaff ? 'flex-start' : 'flex-end',
-                  maxWidth: '80%',
-                  background: m.isStaff ? 'var(--surface-hover)' : 'rgba(34,211,238,.1)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 12,
-                  padding: '9px 13px',
-                  fontSize: 13,
-                }}
-              >
+              <div key={m.id} className={`chat-b ${m.isStaff ? 'chat-op' : 'chat-me'}`}>
                 {m.text}
-                <div style={{ fontSize: 9.5, color: 'var(--text-dim)', marginTop: 4 }}>{new Date(m.createdAt).toLocaleString(lang === 'ru' ? 'ru' : 'en')}</div>
+                <div style={{ fontSize: 9.5, color: 'var(--text-dim)', marginTop: 4 }}>
+                  {new Date(m.createdAt).toLocaleString(lang === 'ru' ? 'ru' : 'en')}
+                </div>
               </div>
             ))}
           </div>
