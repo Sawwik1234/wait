@@ -23,11 +23,13 @@ import { HealthModule } from './health/health.module';
 import { MissionsModule } from './missions/missions.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { BattlesModule } from './battles/battles.module';
+import { EconomyModule } from './economy/economy.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env', '.env'] }),
     PrismaModule,
+    EconomyModule,
     AuthModule,
     UsersModule,
     BalanceModule,

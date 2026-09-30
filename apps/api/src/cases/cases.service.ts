@@ -8,6 +8,7 @@ import { ECONOMY, tableEv } from '../common/economy';
 import { IdempotencyService } from '../common/idempotency.service';
 import { MissionsService } from '../missions/missions.service';
 import { AchievementsService } from '../achievements/achievements.service';
+import { EconomyBudgetService } from '../economy/economy-budget.service';
 
 export interface OpenResult {
   inventoryItemId: string;
@@ -18,6 +19,7 @@ export interface OpenResult {
     image: string;
     rarity: string;
     value: number;
+    internalValue?: number | null;
   };
   roll: number;
   seed: string;
@@ -32,6 +34,7 @@ export class CasesService {
     private readonly idempotency: IdempotencyService,
     private readonly missions: MissionsService,
     private readonly achievements: AchievementsService,
+    private readonly economyBudget: EconomyBudgetService,
   ) {}
 
   list(params: { q?: string; category?: string; sort?: string }) {
@@ -78,7 +81,8 @@ export class CasesService {
 
   /**
    * Open a case `count` times. Server-authoritative:
-   * balance check → atomic spend → per-open seeded RNG → inventory items.
+   * balance check → atomic spend → budget pool filtering → per-open seeded RNG →
+   * reserveReward → inventory items → commitReward to ledger.
    * Everything in ONE transaction; the client can never influence outcomes.
    */
   async open(userId: string, slug: string, count: number, idemKey?: string): Promise<{ results: OpenResult[]; balance: number; xp: number }> {
@@ -97,17 +101,54 @@ export class CasesService {
     if (cost > 100_000) throw new AppException('VALIDATION', 'Batch too large');
 
     return this.prisma.$transaction(async (tx) => {
+      // 1. Spend entry cost from user balance
       const balance = await this.balance.spend(userId, cost, 'CASE_OPEN', data.id, tx);
 
+      // 2. Check remaining daily budget
+      const dateKey = new Date().toISOString().slice(0, 10);
+      const daily = await this.economyBudget.getOrCreateDaily(dateKey, tx);
+      const budget = Math.floor(daily.issuedPoints * 0.95);
+      const remainingBudget = Math.max(0, budget - daily.rewardedPoints - daily.reservedPoints);
+
+      if (remainingBudget <= 0) {
+        throw new AppException('BUDGET_EXCEEDED', 'Daily reward budget is currently exhausted (BLOCK)', HttpStatus.UNPROCESSABLE_ENTITY);
+      }
+
+      // 3. Filter item pool so only items within remaining budget can be rewarded
+      const eligibleItems = data.items.filter((ci) => {
+        const val = ci.item.internalValue ?? ci.item.value;
+        return val <= remainingBudget;
+      });
+
+      if (eligibleItems.length === 0) {
+        throw new AppException(
+          'BUDGET_EXCEEDED',
+          `No items in this case fit into the remaining daily budget (${remainingBudget} AP)`,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        );
+      }
+
       const results: OpenResult[] = [];
-      const weights = data.items.map((x) => x.weight);
+      const weights = eligibleItems.map((x) => x.weight);
 
       for (let i = 0; i < count; i++) {
         const seed = this.random.seedHex();
         const roll = this.random.nextUint32();
         const idx = this.random.pickWeightedIndex(weights, roll);
-        const caseItem = data.items[idx]!;
+        const caseItem = eligibleItems[idx]!;
+        const rewardValue = caseItem.item.internalValue ?? caseItem.item.value;
 
+        // 4. Reserve budget with unique operationId
+        const operationId = `case_open:${userId}:${data.id}:${Date.now()}:${i}:${seed.slice(0, 8)}`;
+        await this.economyBudget.reserveReward(
+          rewardValue,
+          operationId,
+          userId,
+          { caseSlug: slug, itemId: caseItem.itemId, seed, roll },
+          tx,
+        );
+
+        // 5. Create inventory item & audit record
         const inv = await tx.inventoryItem.create({
           data: {
             userId,
@@ -117,7 +158,7 @@ export class CasesService {
           },
         });
 
-        const caseOpen = await tx.caseOpen.create({
+        await tx.caseOpen.create({
           data: {
             userId,
             caseId: data.id,
@@ -130,6 +171,9 @@ export class CasesService {
 
         await tx.caseItem.update({ where: { id: caseItem.id }, data: { rolls: { increment: 1 } } });
 
+        // 6 & 7. Commit reservation to rewardedPoints & immutable ledger
+        await this.economyBudget.commitReward(operationId, rewardValue, tx);
+
         results.push({
           inventoryItemId: inv.id,
           item: {
@@ -139,11 +183,11 @@ export class CasesService {
             image: caseItem.item.image,
             rarity: caseItem.item.rarity,
             value: caseItem.item.value,
+            internalValue: caseItem.item.internalValue,
           },
           roll,
           seed,
         });
-        void caseOpen;
       }
 
       const xp = ECONOMY.XP.CASE_OPEN * count;

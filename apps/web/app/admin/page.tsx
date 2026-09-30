@@ -10,6 +10,18 @@ import { DICT } from '../../lib/i18n';
 
 type Tab = 'dashboard' | 'users' | 'cases' | 'tickets' | 'audit';
 
+interface DailyEconomyStats {
+  date: string;
+  issuedPoints: number;
+  rewardedPoints: number;
+  rewardBudget: number;
+  remainingBudget: number;
+  reservePoints: number;
+  reservedPoints: number;
+  utilizationPercent: number;
+  alertLevel: 'NORMAL' | 'WARNING' | 'CRITICAL' | 'BLOCK';
+}
+
 interface AdminStats {
   users: number;
   bots: number;
@@ -17,6 +29,8 @@ interface AdminStats {
   ownedItems: number;
   upgrades: number;
   contracts: number;
+  dailyEconomy?: DailyEconomyStats;
+  economyHistory?: DailyEconomyStats[];
   profitByDay: { date: string; burned: number; granted: number; net: number }[];
   totalsByType: { type: string; sum: number }[];
 }
@@ -124,6 +138,100 @@ function Dashboard() {
         <StatCard label={t.upgrade} value={data.upgrades} />
         <StatCard label={t.contracts} value={data.contracts} />
       </div>
+
+      {/* ================= DAILY ECONOMY ================= */}
+      {data.dailyEconomy && (
+        <div className="card" style={{ padding: 20, borderColor: data.dailyEconomy.alertLevel === 'BLOCK' ? 'var(--danger)' : data.dailyEconomy.alertLevel === 'CRITICAL' ? 'var(--warning)' : 'var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontWeight: 800, fontSize: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>⚖️ DAILY ECONOMY</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  fontWeight: 900,
+                  letterSpacing: '0.08em',
+                  background:
+                    data.dailyEconomy.alertLevel === 'BLOCK'
+                      ? 'rgba(251,113,133,0.2)'
+                      : data.dailyEconomy.alertLevel === 'CRITICAL'
+                      ? 'rgba(251,191,36,0.2)'
+                      : data.dailyEconomy.alertLevel === 'WARNING'
+                      ? 'rgba(251,191,36,0.12)'
+                      : 'rgba(52,211,153,0.15)',
+                  color:
+                    data.dailyEconomy.alertLevel === 'BLOCK'
+                      ? 'var(--danger)'
+                      : data.dailyEconomy.alertLevel === 'CRITICAL'
+                      ? 'var(--warning)'
+                      : data.dailyEconomy.alertLevel === 'WARNING'
+                      ? 'var(--warning)'
+                      : 'var(--success)',
+                }}
+              >
+                {data.dailyEconomy.alertLevel}
+              </span>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{data.dailyEconomy.date}</span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+            <div style={{ background: 'var(--surface-hover)', padding: '12px 14px', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Issued</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>{data.dailyEconomy.issuedPoints.toLocaleString('ru')} AP</div>
+            </div>
+            <div style={{ background: 'var(--surface-hover)', padding: '12px 14px', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Rewarded</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4, color: 'var(--accent)' }}>{data.dailyEconomy.rewardedPoints.toLocaleString('ru')} AP</div>
+            </div>
+            <div style={{ background: 'var(--surface-hover)', padding: '12px 14px', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Budget (95%)</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>{data.dailyEconomy.rewardBudget.toLocaleString('ru')} AP</div>
+            </div>
+            <div style={{ background: 'var(--surface-hover)', padding: '12px 14px', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Remaining</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4, color: data.dailyEconomy.remainingBudget <= 0 ? 'var(--danger)' : 'var(--success)' }}>
+                {data.dailyEconomy.remainingBudget.toLocaleString('ru')} AP
+              </div>
+            </div>
+            <div style={{ background: 'var(--surface-hover)', padding: '12px 14px', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Reserve (5%)</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4, color: 'var(--warning)' }}>{data.dailyEconomy.reservePoints.toLocaleString('ru')} AP</div>
+            </div>
+            <div style={{ background: 'var(--surface-hover)', padding: '12px 14px', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase' }}>Utilization</div>
+              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4, color: data.dailyEconomy.utilizationPercent > 95 ? 'var(--danger)' : data.dailyEconomy.utilizationPercent > 85 ? 'var(--warning)' : 'inherit' }}>
+                {data.dailyEconomy.utilizationPercent}%
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= 30-DAY CHART: ISSUED VS REWARDS ================= */}
+      {data.economyHistory && data.economyHistory.length > 0 && (
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontWeight: 800 }}>📊 {lang === 'ru' ? 'Issued vs Rewards (последние 30 дней)' : 'Issued vs Rewards (last 30 days)'}</div>
+            <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--text-dim)' }}>
+              <span><span style={{ color: 'var(--accent)' }}>▬</span> Issued (B_day)</span>
+              <span><span style={{ color: 'var(--warning)' }}>▬</span> Rewarded (W_day)</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120 }}>
+            {(() => {
+              const histMax = Math.max(1, ...data.economyHistory.map((h) => Math.max(h.issuedPoints, h.rewardedPoints)));
+              return data.economyHistory.map((h) => (
+                <div key={h.date} style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 1, height: '100%' }} title={`${h.date}: Issued ${h.issuedPoints.toLocaleString('ru')}, Rewarded ${h.rewardedPoints.toLocaleString('ru')}, Util ${h.utilizationPercent}%`}>
+                  <div style={{ flex: 1, height: `${(h.issuedPoints / histMax) * 100}%`, background: 'var(--accent)', opacity: 0.8, borderRadius: 2 }} />
+                  <div style={{ flex: 1, height: `${(h.rewardedPoints / histMax) * 100}%`, background: 'var(--warning)', opacity: 0.85, borderRadius: 2 }} />
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
 
       <div className="card" style={{ padding: 18 }}>
         <div style={{ fontWeight: 800, marginBottom: 12 }}>

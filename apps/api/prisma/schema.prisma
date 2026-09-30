@@ -68,30 +68,63 @@ model Balance {
 
 // Immutable append-only money log. Every AP movement lands here.
 model Ledger {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount       Int // negative = burned, positive = granted
-  type         String // WELCOME_BONUS | DAILY_REWARD | CASE_OPEN | UPGRADE_CONSUME | UPGRADE_PAYOUT | CONTRACT_CONSUME | CONTRACT_PAYOUT | SELL_ITEM | ADMIN_ADJUSTMENT
-  referenceId  String?
-  balanceAfter Int
-  createdAt    DateTime @default(now())
+  id            String   @id @default(uuid())
+  operationId   String?
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Int // negative = burned, positive = granted
+  type          String // ISSUE | REWARD | RESERVE | RELEASE | ADJUSTMENT | WELCOME_BONUS | DAILY_REWARD | CASE_OPEN | UPGRADE_CONSUME | UPGRADE_PAYOUT | CONTRACT_CONSUME | CONTRACT_PAYOUT | SELL_ITEM | ADMIN_ADJUSTMENT
+  referenceId   String?
+  balanceBefore Int      @default(0)
+  balanceAfter  Int
+  metadata      String?
+  createdAt     DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([type, createdAt])
+  @@index([operationId])
+}
+
+model DailyEconomy {
+  id             String   @id @default(uuid())
+  date           String   @unique // 'YYYY-MM-DD' (UTC)
+  issuedPoints   Int      @default(0) // B_day
+  rewardedPoints Int      @default(0) // W_day
+  reservedPoints Int      @default(0) // active in-flight reservations
+  version        Int      @default(0) // concurrency version
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([date])
+}
+
+model EconomyReservation {
+  id          String   @id @default(uuid())
+  operationId String   @unique
+  date        String
+  userId      String?
+  amount      Int
+  status      String   @default("PENDING") // PENDING | COMMITTED | RELEASED
+  metadata    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date, status])
+  @@index([operationId])
 }
 
 // ---------- content ----------
 
 model Item {
-  id           String   @id @default(uuid())
-  slug         String   @unique
-  name         String
-  image        String
-  rarity       String // COMMON | UNCOMMON | RARE | EPIC | LEGENDARY | MYTHIC
-  value        Int // reference AP value used by economy math
-  kind         String   @default("WEAPON") // WEAPON | KNIFE | GEAR
-  displayOrder Int      @default(0)
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  image         String
+  rarity        String // COMMON | UNCOMMON | RARE | EPIC | LEGENDARY | MYTHIC
+  value         Int // reference AP value used by economy math
+  internalValue Int? // internal economy valuation for budget accounting
+  kind          String   @default("WEAPON") // WEAPON | KNIFE | GEAR
+  displayOrder  Int      @default(0)
 
   caseItems CaseItem[]
   inventory InventoryItem[]

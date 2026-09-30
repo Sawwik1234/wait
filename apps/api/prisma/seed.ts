@@ -261,7 +261,7 @@ async function main() {
 
   // ---- items ----
   for (const [i, def] of ITEMS.entries()) {
-    await prisma.item.create({ data: { ...def, displayOrder: i } });
+    await prisma.item.create({ data: { ...def, internalValue: def.value, displayOrder: i } });
   }
   const items = await prisma.item.findMany();
   const bySlug = new Map(items.map((it) => [it.slug, it]));

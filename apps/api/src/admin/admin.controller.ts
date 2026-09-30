@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { PrismaService } from '../prisma/prisma.service';
 import { BalanceService } from '../balance/balance.service';
 import { CasesService } from '../cases/cases.service';
+import { EconomyBudgetService } from '../economy/economy-budget.service';
 import { CurrentUser, Roles } from '../common/decorators';
 import { ZodPipe } from '../common/pipes/zod.pipe';
 
@@ -37,6 +38,7 @@ export class AdminController {
     private readonly prisma: PrismaService,
     private readonly balance: BalanceService,
     private readonly casesService: CasesService,
+    private readonly economyBudget: EconomyBudgetService,
   ) {}
 
   private audit(actorId: string, action: string, entity?: string, entityId?: string, meta?: unknown) {
@@ -60,7 +62,7 @@ export class AdminController {
     const dayAgo = new Date(Date.now() - 86_400_000);
     const fourteenAgo = new Date(Date.now() - 14 * 86_400_000);
 
-    const [users, bots, opensToday, spendRows, grantRows, ownedItems, upgrades, contracts] = await Promise.all([
+    const [users, bots, opensToday, spendRows, grantRows, ownedItems, upgrades, contracts, dailyEconomy, economyHistory] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.user.count({ where: { isBot: true } }),
       this.prisma.caseOpen.count({ where: { createdAt: { gte: dayAgo } } }),
@@ -72,6 +74,8 @@ export class AdminController {
       this.prisma.inventoryItem.count({ where: { status: 'OWNED' } }),
       this.prisma.upgrade.count(),
       this.prisma.contract.count(),
+      this.economyBudget.getDailyStats(),
+      this.economyBudget.getHistory(30),
     ]);
 
     const byDay = new Map<string, { burned: number; granted: number }>();
@@ -100,6 +104,8 @@ export class AdminController {
       ownedItems,
       upgrades,
       contracts,
+      dailyEconomy,
+      economyHistory,
       profitByDay: [...byDay.entries()].map(([date, v]) => ({ date, ...v, net: v.burned - v.granted })),
       totalsByType: totals.map((t) => ({ type: t.type, sum: t._sum.amount ?? 0 })),
     };
